@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excavator Simulator</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 5px;
+      font-size: 14px;
+      max-width: 400px;
+      line-height: 1.5;
+    }
+
+    #info h2 {
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    #info .connected {
+      color: #00ff00;
+    }
+
+    #info .disconnected {
+      color: #ff0000;
+    }
+
+    #info ul {
+      margin-left: 20px;
+      margin-top: 10px;
+    }
+
+    #info li {
+      margin-bottom: 5px;
+    }
+
+    #telemetry {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #00ff00;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      min-width: 280px;
+      border: 2px solid #00ff00;
+    }
+
+    #telemetry h3 {
+      margin-bottom: 10px;
+      font-size: 16px;
+      text-align: center;
+      border-bottom: 1px solid #00ff00;
+      padding-bottom: 5px;
+    }
+
+    #telemetry .section {
+      margin-bottom: 12px;
+    }
+
+    #telemetry .section-title {
+      color: #ffff00;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    #telemetry .data-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 3px;
+    }
+
+    #telemetry .label {
+      color: #aaaaaa;
+    }
+
+    #telemetry .value {
+      color: #00ff00;
+      font-weight: bold;
+    }
+
+    @keyframes limitFlash {
+      0%, 100% {
+        background-color: rgba(255, 0, 0, 0.8);
+      }
+      50% {
+        background-color: rgba(255, 0, 0, 0.3);
+      }
+    }
+
+    #telemetry .value.limit-flash {
+      animation: limitFlash 0.5s infinite;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    #physics-debug {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      color: #00ffff;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      min-width: 350px;
+      max-width: 400px;
+      border: 2px solid #00ffff;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    #physics-debug h3 {
+      margin-bottom: 10px;
+      font-size: 16px;
+      text-align: center;
+      border-bottom: 1px solid #00ffff;
+      padding-bottom: 5px;
+    }
+
+    #physics-debug .section {
+      margin-bottom: 10px;
+    }
+
+    #physics-debug .section-title {
+      color: #ffff00;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    #physics-debug .collision-event {
+      background: rgba(255, 255, 0, 0.1);
+      padding: 5px;
+      margin-bottom: 3px;
+      border-left: 3px solid #ffff00;
+      font-size: 11px;
+    }
+
+    #physics-debug .collision-event.active {
+      background: rgba(255, 0, 0, 0.2);
+      border-left-color: #ff0000;
+    }
+
+    #physics-debug .data-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 2px;
+      font-size: 11px;
+    }
+
+    #physics-debug .label {
+      color: #aaaaaa;
+    }
+
+    #physics-debug .value {
+      color: #00ffff;
+      font-weight: bold;
+    }
+
+    #physics-debug .force-vector {
+      color: #ff00ff;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="info">
+    <h2>Excavator Simulator</h2>
+    <div id="gamepad-status" class="disconnected">Gamepad: Waiting for Input</div>
+    <ul>
+      <li><strong>Left Stick X (A/D):</strong> Yaw rotation of main body</li>
+      <li><strong>Left Stick Y (W/S):</strong> Second arm segment angle</li>
+      <li><strong>Right Stick Y (↑/↓):</strong> First arm segment angle</li>
+      <li><strong>Right Stick X (←/→):</strong> Bucket wrist angle</li>
+      <li><strong>RT (/):</strong> Right tread forward</li>
+      <li><strong>LT (Z):</strong> Left tread forward</li>
+      <li><strong>RB (.):</strong> Right tread backward</li>
+      <li><strong>LB (X):</strong> Left tread backward</li>
+      <li><strong>D-Pad Up/Down (R/F):</strong> Thumb open/close</li>
+      <li><strong>Y/A (T/G):</strong> Raise/Lower blade</li>
+    </ul>
+  </div>
+  
+  <div id="telemetry">
+    <h3>◼ TELEMETRY ◼</h3>
+    
+    <div class="section">
+      <div class="section-title">JOINT ANGLES</div>
+      <div class="data-row">
+        <span class="label">Body Yaw:</span>
+        <span class="value" id="body-yaw">0.0°</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Arm 1:</span>
+        <span class="value" id="arm1-angle">0.0°</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Arm 2:</span>
+        <span class="value" id="arm2-angle">0.0°</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Bucket:</span>
+        <span class="value" id="bucket-angle">0.0°</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Thumb:</span>
+        <span class="value" id="thumb-angle">0.0°</span>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">BLADE POSITION</div>
+      <div class="data-row">
+        <span class="label">Height:</span>
+        <span class="value" id="blade-height">0.00m</span>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">TREAD FORCES</div>
+      <div class="data-row">
+        <span class="label">Left Tread:</span>
+        <span class="value" id="left-tread">0.00</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Right Tread:</span>
+        <span class="value" id="right-tread">0.00</span>
+      </div>
+    </div>
+  </div>
+  
+  <div id="physics-debug">
+    <h3>⚡ PHYSICS DEBUG ⚡</h3>
+    
+    <div class="section">
+      <div class="section-title">CHASSIS VELOCITY</div>
+      <div class="data-row">
+        <span class="label">Linear:</span>
+        <span class="value force-vector" id="linear-velocity">(0.00, 0.00, 0.00)</span>
+      </div>
+      <div class="data-row">
+        <span class="label">Angular:</span>
+        <span class="value force-vector" id="angular-velocity">(0.00, 0.00, 0.00)</span>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">ACTIVE COLLISIONS</div>
+      <div id="collision-list">
+        <div style="color: #888; font-style: italic;">No collisions detected</div>
+      </div>
+    </div>
+    
+    <div class="section">
+      <div class="section-title">COLLISION STATS</div>
+      <div class="data-row">
+        <span class="label">Total Events:</span>
+        <span class="value" id="total-collisions">0</span>
+      </div>
+      <div class="data-row">
+        <span class="label">This Frame:</span>
+        <span class="value" id="frame-collisions">0</span>
+      </div>
+    </div>
+  </div>
+  
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

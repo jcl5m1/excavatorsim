@@ -1,0 +1,28 @@
+{
+  "name": "excavator-simulator",
+  "version": "1.0.0",
+  "description": "3D Excavator Simulator with USB Gamepad Controls",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "threejs",
+    "excavator",
+    "simulator",
+    "gamepad"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/three": "^0.159.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
+  },
+  "dependencies": {
+    "cannon-es": "^0.20.0",
+    "three": "^0.159.0"
+  }
+}

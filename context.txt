@@ -1,0 +1,99 @@
+this is a typscript project that using threeks to make an excavator simulator that used the gamepad for input.  
+the controls are:
+ joystick left (WASD): x-axis controls yaw of the body.  y-axis control the 2nd arm joint angle
+ joystick right (arrows): y-axis control 1st arm segement angle, and x-axis bucket angle
+ left trigger (z): left tread forward
+ left shoulder (x): left thread backwards
+ right trigger (/): right tread forward
+ right shoulder (.): right thread backwards
+ d-pad up (r): thumb open
+ d-pad down(f): thumb close
+ y button (t): front blade raise
+ z-button (g): front blade lower
+
+
+if the port is already in use, that means an old version of the server is still running.  stop the existing process using the port and reuse the port
+
+## Key Project Files
+
+### package.json
+Project configuration and dependencies. Uses Vite as the build tool and development server. Main dependencies:
+- three.js (v0.159.0): 3D graphics library for rendering the excavator and scene
+- cannon-es (v0.20.0): Physics engine for realistic excavator movement and collision detection
+- TypeScript for type-safe development
+
+### index.html
+The HTML entry point that sets up the UI structure with:
+- Canvas container for the 3D scene (full viewport)
+- Info panel (top-left): displays control instructions and gamepad connection status
+- Telemetry panel (top-right): real-time display of joint angles, blade position, and tread forces
+- Module script import that loads src/main.ts
+
+### src/main.ts
+Main application class (ExcavatorSimulator) that orchestrates the entire simulation:
+- Initializes Three.js scene, camera, renderer with shadows and fog
+- Creates Cannon.js physics world with gravity
+- Sets up lighting (ambient, directional, hemisphere) for realistic rendering
+- Creates ground plane with physics collision
+- Instantiates Excavator, GamepadController, and KeyboardController
+- Implements mouse controls for orbiting camera (drag to rotate, scroll to zoom)
+- Main animation loop that:
+  - Steps physics simulation (60 FPS fixed timestep)
+  - Merges gamepad and keyboard input states
+  - Updates excavator controls based on input
+  - Updates camera position to follow excavator
+  - Updates telemetry display
+  - Renders the scene
+
+### src/Excavator.ts
+Excavator class that defines the 3D model and physics:
+- Creates detailed visual geometry using Three.js:
+  - Chassis base with treads on left/right sides
+  - Front blade (adjustable height)
+  - Rotating main body with transparent cabin
+  - Articulated arm with two segments (arm1 split into two parts at 60° angle, arm2)
+  - Bucket with scoop shape at the end
+  - Thumb gripper attached to arm2
+- Physics body using Cannon.js (500kg mass with damping)
+- Control methods for all movable parts with angle/position limits:
+  - setMainBodyRotation: rotates upper body (no limits)
+  - setArm1Angle: first arm segment (0.0 to 1.25 rad)
+  - setArm2Angle: second arm segment (0.25 to 2.5 rad)
+  - setBucketAngle: bucket wrist (-π/2 to π/2 rad)
+  - setThumbAngle: thumb gripper (-3.0 to -0.2 rad)
+  - setBladeHeight: front blade height (-0.5 to -0.2 m)
+  - applyTreadForces: applies forces and torque for tank-style movement
+- Getter methods for telemetry data export
+- Update method that syncs visual model with physics body position/rotation
+
+### src/GamepadController.ts
+GamepadController class for USB gamepad input:
+- Defines GamepadState interface with all control inputs (analog sticks, triggers, buttons)
+- Polls browser's Gamepad API each frame to get current state
+- Handles gamepad connect/disconnect events
+- Applies deadzone filtering (0.15) to analog inputs to prevent drift
+- Maps standard gamepad layout:
+  - Left stick: axes[0] (X), axes[1] (Y)
+  - Right stick: axes[2] (Y), axes[3] (X) - note swapped indices
+  - Triggers: axes[6-7] or buttons[6-7] depending on gamepad type
+  - Bumpers: buttons[4-5]
+  - D-pad: buttons[12-13]
+  - Face buttons: buttons[0] (A), buttons[3] (Y)
+- Updates UI gamepad status indicator
+
+### src/KeyboardController.ts
+KeyboardController class for keyboard input (implements same GamepadState interface):
+- Provides keyboard alternative to gamepad with same control scheme
+- Tracks pressed keys using Set<string>
+- Maps keys to simulate gamepad inputs:
+  - WASD: left stick (A=left, D=right, W=up, S=down)
+  - Arrow keys: right stick (Up/Down for arm1, Left/Right for bucket)
+  - Z/X: left tread (forward/backward)
+  - /. (slash/period): right tread (forward/backward)
+  - R/F: thumb rotation (open/close)
+  - T/G: blade height (raise/lower)
+- Input states are merged with gamepad in main.ts (keyboard takes priority)
+- Clears all keys on window blur to prevent stuck inputs
+
+### tsconfig.json
+TypeScript compiler configuration for the project with ES2020 target and module resolution settings.
